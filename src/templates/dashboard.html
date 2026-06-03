@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: system-ui, Arial;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    /* GÓRA - MEDIA */
+    .media-container {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #111827;
+    }
+
+    img, video {
+        max-width: 90%;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    /* DÓŁ - KATEGORIE */
+    .categories {
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        background: #0b1220;
+        overflow-x: auto;
+        border-top: 1px solid #334155;
+    }
+
+    button {
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background: #334155;
+        color: white;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+
+    button:hover {
+        background: #38bdf8;
+        color: #0f172a;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="media-container">
+    <!-- domyślnie obraz -->
+    <img id="media" src="https://picsum.photos/800/500" alt="media">
+</div>
+
+<div class="categories">
+    <button onclick="saveState()">Save</button>
+    <button onclick="loadState()">Load</button>
+    <span id="categories"></span>
+</div>
+
+
+<script>
+let categories = [];
+let files = [];
+
+let file_id = 0;
+
+let categorized_files = {};
+
+async function getCategories() {
+    const response = await fetch("/get-categories");
+    categories = await response.json();
+
+    console.log("Categories:", categories);
+}
+
+async function getFiles() {
+    const response = await fetch("/get-files");
+    files = await response.json();
+
+    console.log("Files:", files);
+}
+
+function changeCategory(category) {
+    console.log(
+        "Wybrano kategorię:",
+        category.name,
+        category.path
+    );
+
+    let file = files[file_id];
+    categorized_files[file] = {"category_name": category.name, "category_path": category.path};
+
+    file_id = file_id + 1;
+    let media_container = document.querySelector(".media-container");
+    media_container.innerHTML = '<img id="media" src="/get-file/'+files[file_id]+'" alt="media">';
+
+}
+
+function renderUI() {
+    const container = document.getElementById("categories");
+
+    if (!categories.length) {
+        container.innerHTML = "Brak kategorii";
+        return;
+    }
+
+    container.innerHTML = categories.map(category => {
+
+        const label = category.bind
+            ? `${category.name} [${category.bind}]`
+            : category.name;
+
+        return `
+            <button
+                data-name="${category.name}"
+            >
+                ${label}
+            </button>
+        `;
+    }).join("");
+
+    const buttons = container.querySelectorAll("button");
+
+    buttons.forEach((button, index) => {
+        button.addEventListener("click", () => {
+            changeCategory(categories[index]);
+        });
+    });
+}
+
+function setupKeybinds() {
+    document.addEventListener("keydown", event => {
+
+        const key = event.key.toLowerCase();
+
+        const category = categories.find(cat =>
+            cat.bind &&
+            cat.bind.toLowerCase() === key
+        );
+
+        if (category) {
+            changeCategory(category);
+        }
+    });
+}
+
+function showCurrentFile()
+{
+    let media_container = document.querySelector(".media-container");
+    media_container.innerHTML = '<img id="media" src="/get-file/'+files[file_id]+'" alt="media">';
+}
+
+function saveState() {
+    console.log("Zapisywanie stanu");
+    let save_name = prompt("Podaj nazwę zapisu");
+
+    if (!save_name) return;
+
+    let state = {
+        categories: categories,
+        files: files,
+        file_id: file_id,
+        categorized_files: categorized_files,
+        name: save_name
+    };
+
+    fetch("/save-state", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(state)
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log("Zapisano:", data);
+        alert("Zapis udany!");
+    })
+    .catch(err => {
+        console.error("Błąd zapisu:", err);
+        alert("Błąd zapisu!");
+    });
+}
+
+
+function loadState() {
+    console.log("Ładowanie stanu");
+
+    let save_name = prompt("Podaj nazwę zapisu");
+    if (!save_name) return;
+
+    fetch(`/load-state?name=${encodeURIComponent(save_name)}`)
+    .then(async res => {
+
+        const text = await res.text();
+        console.log("RAW:", text);
+
+        return JSON.parse(text);
+    })
+    .then(data => {
+        console.log("OK:", data);
+
+        categories = data.categories;
+        files = data.files;
+        file_id = data.file_id
+
+        renderUI?.();
+        showCurrentFile?.();
+
+        alert("Załadowano!");
+    })
+    .catch(err => {
+        console.error("Błąd:", err);
+        alert("Błąd ładowania!");
+    });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await getCategories();
+        await getFiles();
+
+        renderUI();
+        setupKeybinds();
+
+    } catch (err) {
+        console.error(err);
+    }
+});
+</script>
+
+</body>
+</html>
