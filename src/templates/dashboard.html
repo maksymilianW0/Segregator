@@ -56,10 +56,69 @@
         background: #38bdf8;
         color: #0f172a;
     }
+
+
+
+    #add_category_window
+    {
+        position: absolute;
+
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+
+        background: #0b1220;
+        border: 1px solid #334155;
+        padding: 15px;
+        border-radius: 10px;
+        transition: 0.2s;
+        max-width: 500px;
+    }
+
+    #add_category_window input {
+        width: 400px;
+        padding: 10px;
+        margin: 6px 0 14px 0;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #0b1220;
+        color: #e2e8f0;
+        outline: none;
+    }
+
+
+
+    .hide
+    {
+        display: none;
+    }
 </style>
 </head>
 
 <body>
+
+<div id="add_category_window" class="hide">
+
+    <label>Nazwa kategorii</label>
+    <br>
+    <input type="text" name="category_name" class="added" required>
+    <br>
+    <label>Ścieżka kategorii</label>
+    <br>
+    <input type="text" name="category_path"  class="added" required>
+    <br>
+    <label>Bind</label>
+    <br>
+    <input type="text" name="category_bind"  class="added">
+    <br>
+    <button type="button" class="cancel-remove" onclick="hideNewCategory()">
+        Anuluj
+    </button>
+    <button type="button" class="done-new-category" onclick="createNewCategory()">
+        Stwórz
+    </button>
+
+</div>
 
 <div class="media-container">
     <!-- domyślnie obraz -->
@@ -67,6 +126,8 @@
 </div>
 
 <div class="categories">
+    <button onclick="back()">Back</button>
+    <button onclick="newCategory()">New Category</button>
     <button onclick="saveState()">Save</button>
     <button onclick="loadState()">Load</button>
     <span id="categories"></span>
@@ -229,6 +290,61 @@ function loadState() {
         alert("Błąd ładowania!");
     });
 }
+
+
+
+function back()
+{
+    let file_name = files[file_id-1];
+    delete categorized_files[file_name]
+    file_id = file_id - 1
+
+    let media_container = document.querySelector(".media-container");
+    media_container.innerHTML = '<img id="media" src="/get-file/'+files[file_id]+'" alt="media">';
+}
+
+
+function newCategory()
+{
+    let new_category_window = document.querySelector("#add_category_window");
+    new_category_window.classList.remove("hide")
+}
+
+function hideNewCategory()
+{
+    let new_category_window = document.querySelector("#add_category_window");
+    new_category_window.classList.add("hide")
+
+    let c_name = document.querySelector("[name=category_name]");
+    let c_path = document.querySelector("[name=category_path]");
+    let c_bind = document.querySelector("[name=category_bind]");
+
+    let c_name_text = c_name.value = "";
+    let c_path_text = c_path.value = "";
+    let c_bind_text = c_bind.value = "";
+}
+
+
+
+function createNewCategory()
+{
+    let c_name = document.querySelector("[name=category_name]");
+    let c_path = document.querySelector("[name=category_path]");
+    let c_bind = document.querySelector("[name=category_bind]");
+
+    let c_name_text = c_name.value;
+    let c_path_text = c_path.value;
+    let c_bind_text = c_bind.value;
+
+    let new_category = {name: c_name_text, path: c_path_text, bind: c_bind_text};
+
+    categories.push(new_category);
+
+    renderUI();
+    hideNewCategory();
+}
+
+
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {
